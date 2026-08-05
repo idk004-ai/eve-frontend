@@ -1,4 +1,4 @@
-import { userApi } from "@/shared/api/http";
+import { api } from "@/shared/api/http";
 import type { BaseResponse } from "@/shared/api/types";
 import type { AuthResponse, LoginRequest, RegisterRequest, User } from "./types";
 
@@ -15,17 +15,17 @@ function unwrap<T>(response: BaseResponse<T>): T {
 
 export const authApi = {
   login: async (body: LoginRequest): Promise<AuthResponse> => {
-    const { data } = await userApi.post<BaseResponse<AuthResponse>>("/auth/login", body);
+    const { data } = await api.post<BaseResponse<AuthResponse>>("/api/user/auth/login", body);
     return unwrap(data);
   },
 
   register: async (body: RegisterRequest): Promise<AuthResponse> => {
-    const { data } = await userApi.post<BaseResponse<AuthResponse>>("/auth/register", body);
+    const { data } = await api.post<BaseResponse<AuthResponse>>("/api/user/auth/register", body);
     return unwrap(data);
   },
 
   me: async (): Promise<User> => {
-    const { data } = await userApi.get<BaseResponse<User>>("/users/me");
+    const { data } = await api.get<BaseResponse<User>>("/api/user/users/me");
     return unwrap(data);
   },
 };
