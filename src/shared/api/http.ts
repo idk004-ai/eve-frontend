@@ -1,5 +1,17 @@
 import axios from "axios";
 import { useAuthStore } from "@/features/auth/store";
+import type { BaseResponse } from "./types";
+
+declare module "axios" {
+  interface AxiosError {
+    /**
+     * Message đã chuẩn hóa (ưu tiên `BaseResponse.message` từ backend, fallback
+     * `error.message`) — interceptor chung gắn sẵn, dùng thay vì mỗi nơi tự
+     * `isAxiosError(e) && e.response?.data?.message`.
+     */
+    userMessage?: string;
+  }
+}
 
 /**
  * 1 axios instance dùng chung cho toàn bộ FE, baseURL để trống — mọi call dùng
@@ -23,6 +35,10 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
+    }
+    if (axios.isAxiosError(error)) {
+      const body = error.response?.data as BaseResponse<unknown> | undefined;
+      error.userMessage = body?.message ?? error.message ?? "Có lỗi xảy ra, vui lòng thử lại";
     }
     return Promise.reject(error);
   },
