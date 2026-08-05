@@ -6,19 +6,26 @@ import type { AuthResponse, LoginRequest, RegisterRequest, User } from "./types"
  * Contract REST dự kiến của user-service (hiện backend mới có gRPC).
  * Khi user-service expose REST thật, chỉ cần chỉnh path tại đây.
  */
+function unwrap<T>(response: BaseResponse<T>): T {
+  if (response.data === null) {
+    throw new Error(response.message ?? "Backend trả về data rỗng");
+  }
+  return response.data;
+}
+
 export const authApi = {
   login: async (body: LoginRequest): Promise<AuthResponse> => {
     const { data } = await userApi.post<BaseResponse<AuthResponse>>("/auth/login", body);
-    return data.data;
+    return unwrap(data);
   },
 
   register: async (body: RegisterRequest): Promise<AuthResponse> => {
     const { data } = await userApi.post<BaseResponse<AuthResponse>>("/auth/register", body);
-    return data.data;
+    return unwrap(data);
   },
 
   me: async (): Promise<User> => {
     const { data } = await userApi.get<BaseResponse<User>>("/users/me");
-    return data.data;
+    return unwrap(data);
   },
 };
