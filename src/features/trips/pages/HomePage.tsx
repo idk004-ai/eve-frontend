@@ -63,7 +63,12 @@ export function HomePage() {
               <Label htmlFor="arrival">Điểm đến</Label>
               <div className="relative">
                 <MapPin className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <Input id="arrival" className="pl-9" placeholder="Đà Lạt" {...register("arrival")} />
+                <Input
+                  id="arrival"
+                  className="pl-9"
+                  placeholder="Đà Lạt"
+                  {...register("arrival")}
+                />
               </div>
               {errors.arrival && <p className="text-xs text-red-600">{errors.arrival.message}</p>}
             </div>
