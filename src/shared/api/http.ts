@@ -8,7 +8,7 @@ import { useAuthStore } from "@/features/auth/store";
  * reverse-proxy cùng scheme `/api/<service>/`. Nhờ path scheme giống nhau ở cả
  * 2 môi trường nên không cần env base URL riêng cho từng service.
  */
-export const api = axios.create({ timeout: 15_000 });
+export const api = axios.create({ baseURL: "/", timeout: 15_000 });
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
