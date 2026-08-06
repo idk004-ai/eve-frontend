@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
@@ -15,19 +16,22 @@ function todayISO(): string {
   return new Date(now.getTime() - offset).toISOString().slice(0, 10);
 }
 
+function filterOptions(options: ComboboxOption[], query: string): ComboboxOption[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return options;
+  return options.filter((option) => option.label.toLowerCase().includes(q));
+}
+
 interface HeroSearchFormProps {
-  /** Danh sách điểm đi/đến hiển thị trong Combobox — B1 dùng mock, B4 gắn API thật (xem HomePage). */
-  locationOptions: ComboboxOption[];
-  onSearchLocations?: (query: string) => void;
+  /** Toàn bộ điểm đi/đến — fetch 1 lần ở HomePage, lọc client-side riêng cho từng ô tại đây. */
+  locations: ComboboxOption[];
   locationsLoading?: boolean;
 }
 
-export function HeroSearchForm({
-  locationOptions,
-  onSearchLocations,
-  locationsLoading,
-}: HeroSearchFormProps) {
+export function HeroSearchForm({ locations, locationsLoading }: HeroSearchFormProps) {
   const navigate = useNavigate();
+  const [fromQuery, setFromQuery] = useState("");
+  const [toQuery, setToQuery] = useState("");
   const {
     control,
     handleSubmit,
@@ -46,6 +50,10 @@ export function HeroSearchForm({
     const { from, to } = getValues();
     setValue("from", to, { shouldValidate: true });
     setValue("to", from, { shouldValidate: true });
+    // Reset bộ lọc client-side: option vừa hoán đổi có thể không khớp query cũ
+    // của ô kia, làm mất label hiển thị nếu vẫn lọc theo query cũ.
+    setFromQuery("");
+    setToQuery("");
   }
 
   function onSubmit(values: HeroSearchFormValues) {
@@ -68,10 +76,10 @@ export function HeroSearchForm({
               name="from"
               render={({ field }) => (
                 <Combobox
-                  options={locationOptions}
+                  options={filterOptions(locations, fromQuery)}
                   value={field.value}
                   onChange={field.onChange}
-                  onSearch={onSearchLocations}
+                  onSearch={setFromQuery}
                   loading={locationsLoading}
                   placeholder="Chọn điểm đi"
                 />
@@ -98,10 +106,10 @@ export function HeroSearchForm({
               name="to"
               render={({ field }) => (
                 <Combobox
-                  options={locationOptions}
+                  options={filterOptions(locations, toQuery)}
                   value={field.value}
                   onChange={field.onChange}
-                  onSearch={onSearchLocations}
+                  onSearch={setToQuery}
                   loading={locationsLoading}
                   placeholder="Chọn điểm đến"
                 />

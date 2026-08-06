@@ -1,14 +1,17 @@
-import { mockLocations } from "@/shared/mocks/locations";
+import { useMemo } from "react";
+import { useLocations } from "../hooks";
 import { HeroSearchForm } from "../components/HeroSearchForm";
 import { PopularRoutes } from "../components/PopularRoutes";
 import { ServiceCommitments } from "../components/ServiceCommitments";
 
-const locationOptions = mockLocations.map((location) => ({
-  value: location.id,
-  label: location.name,
-}));
-
 export function HomePage() {
+  const { data: locations, isLoading } = useLocations();
+
+  const locationOptions = useMemo(
+    () => (locations ?? []).map((location) => ({ value: location.id, label: location.name })),
+    [locations],
+  );
+
   return (
     <div className="flex flex-col gap-10">
       <section className="rounded-2xl bg-gradient-to-r from-brand-700 to-brand-500 px-6 py-16 text-center text-white">
@@ -18,7 +21,7 @@ export function HomePage() {
         </p>
       </section>
 
-      <HeroSearchForm locationOptions={locationOptions} />
+      <HeroSearchForm locations={locationOptions} locationsLoading={isLoading} />
 
       <PopularRoutes />
 
