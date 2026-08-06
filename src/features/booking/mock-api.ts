@@ -1,6 +1,13 @@
-import type { Booking, BookingItem, CreateBookingRequest, Payment, SeatHold } from "@/shared/api/types";
+import type {
+  Booking,
+  BookingItem,
+  CreateBookingRequest,
+  Payment,
+  QRCode,
+  SeatHold,
+} from "@/shared/api/types";
 import { mockBookings } from "@/shared/mocks/bookings";
-import { mockPayments } from "@/shared/mocks/payments";
+import { mockPayments, QR_CODE_DEMO } from "@/shared/mocks/payments";
 import { createMockSeatHold } from "@/shared/mocks/seat-inventory";
 
 /**
@@ -119,7 +126,59 @@ export async function getBookingById(id: string): Promise<Booking | null> {
   return bookingsDb.get(id) ?? null;
 }
 
-export async function getPaymentById(id: string): Promise<Payment | null> {
-  await wait(200);
-  return paymentsDb.get(id) ?? null;
+export async function createQrCode(paymentId: string, amount: number): Promise<QRCode> {
+  await wait(400);
+
+  const payment = paymentsDb.get(paymentId);
+  if (!payment) throw new Error("Không tìm thấy giao dịch thanh toán");
+
+  const expiresIn = payment.expiresAt
+    ? Math.max(0, Math.floor((new Date(payment.expiresAt).getTime() - Date.now()) / 1000))
+    : PAYMENT_TTL_SECONDS;
+
+  // Chưa có payment-service thật trả QR — dùng lại ảnh QR giả từ shared/mocks/payments.ts,
+  // chỉ đổi code/expiresIn theo đúng payment hiện tại.
+  return {
+    code: `QR-${paymentId}`,
+    desc: `Quét mã để thanh toán ${amount.toLocaleString("vi-VN")}đ`,
+    data: { qrCode: `mock-qr-payload:${paymentId}:${amount}`, qrDataURL: QR_CODE_DEMO.data.qrDataURL },
+    expiresIn,
+  };
+}
+
+// Demo: coi như khách quét & xác nhận thành công sau ngần này giây kể từ lúc tạo payment —
+// chưa có payment-service thật để nhận webhook, nên "tự thành công" theo thời gian là cách duy
+// nhất để demo trọn luồng poll → CONFIRMED (D8/Phase 2 exit criteria) trên mock.
+const PAYMENT_AUTO_SUCCESS_AFTER_SECONDS = 8;
+
+export async function getPaymentStatus(paymentId: string): Promise<Payment> {
+  await wait(300);
+
+  const payment = paymentsDb.get(paymentId);
+  if (!payment) throw new Error("Không tìm thấy giao dịch thanh toán");
+  if (payment.status !== "PROCESSING" && payment.status !== "PENDING") return payment;
+
+  const expiresAtMs = payment.expiresAt ? new Date(payment.expiresAt).getTime() : null;
+
+  if (expiresAtMs !== null && Date.now() >= expiresAtMs) {
+    const expired: Payment = { ...payment, status: "FAILED" };
+    paymentsDb.set(paymentId, expired);
+    markBookingStatusByPaymentId(paymentId, "EXPIRED");
+    return expired;
+  }
+
+  const createdAtMs = expiresAtMs !== null ? expiresAtMs - PAYMENT_TTL_SECONDS * 1000 : Date.now();
+  if (Date.now() - createdAtMs >= PAYMENT_AUTO_SUCCESS_AFTER_SECONDS * 1000) {
+    const succeeded: Payment = { ...payment, status: "SUCCEEDED", paidAt: new Date().toISOString() };
+    paymentsDb.set(paymentId, succeeded);
+    markBookingStatusByPaymentId(paymentId, "CONFIRMED");
+    return succeeded;
+  }
+
+  return payment;
+}
+
+function markBookingStatusByPaymentId(paymentId: string, status: Booking["status"]): void {
+  const booking = [...bookingsDb.values()].find((b) => b.paymentId === paymentId);
+  if (booking) bookingsDb.set(booking.id, { ...booking, status });
 }

@@ -4,9 +4,11 @@ import { formatCountdown, secondsUntil } from "../utils";
 interface HoldCountdownProps {
   expiresAt: string;
   onExpire: () => void;
+  /** Nhãn hiển thị trước số đếm ngược — dùng lại cho cả giữ ghế (mặc định) lẫn thanh toán (D8). */
+  label?: string;
 }
 
-export function HoldCountdown({ expiresAt, onExpire }: HoldCountdownProps) {
+export function HoldCountdown({ expiresAt, onExpire, label = "Đang giữ ghế" }: HoldCountdownProps) {
   // Lazy init đọc `expiresAt` tại thời điểm mount — component được remount bằng `key={hold.id}`
   // ở nơi gọi mỗi khi có hold mới nên không cần đồng bộ lại giá trị này trong effect.
   const [secondsLeft, setSecondsLeft] = useState(() => secondsUntil(expiresAt));
@@ -24,7 +26,7 @@ export function HoldCountdown({ expiresAt, onExpire }: HoldCountdownProps) {
 
   return (
     <p className="text-sm font-medium text-amber-700">
-      Đang giữ ghế — còn lại <span className="tabular-nums">{formatCountdown(secondsLeft)}</span>
+      {label} — còn lại <span className="tabular-nums">{formatCountdown(secondsLeft)}</span>
     </p>
   );
 }
