@@ -9,6 +9,7 @@ export interface SelectedSeat {
   seatId: string;
   seatNumber: string;
   floor: number;
+  seatType?: string | null;
 }
 
 export interface PassengerContact {
@@ -83,7 +84,7 @@ export const useBookingStore = create<BookingFlowState>()((set, get) => ({
     set({
       selectedSeats: [
         ...selectedSeats,
-        { seatId: seat.seatId, seatNumber: seat.seatNumber, floor: seat.floor },
+        { seatId: seat.seatId, seatNumber: seat.seatNumber, floor: seat.floor, seatType: seat.seatType },
       ],
       seatLimitError: null,
       holdMessage: null,

@@ -1,20 +1,23 @@
 import { useEffect, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import type { CreateBookingItemRequest, CreateBookingRequest } from "@/shared/api/types";
 import { EmptyState } from "@/shared/components/EmptyState";
 import { Spinner } from "@/shared/ui/spinner";
 import { mockTrips } from "@/shared/mocks/trips";
+import { BookingSummarySidebar } from "../components/BookingSummarySidebar";
 import { HoldCountdown } from "../components/HoldCountdown";
 import { PassengerForm } from "../components/PassengerForm";
 import { SeatMap } from "../components/SeatMap";
 import { StopSelector } from "../components/StopSelector";
-import { useSeatHoldMutation } from "../hooks";
+import { useCreateBookingMutation, useSeatHoldMutation } from "../hooks";
 import { useBookingStore } from "../store";
-import { buildSeatMapData, getStopOptions } from "../utils";
+import { buildSeatMapData, getSeatPrice, getStopOptions, getTripRouteLabel } from "../utils";
 
 const HOLD_DEBOUNCE_MS = 500;
 
 export function SeatSelectionPage() {
   const { tripId } = useParams<{ tripId: string }>();
+  const navigate = useNavigate();
   const selectedSeats = useBookingStore((s) => s.selectedSeats);
   const seatLimitError = useBookingStore((s) => s.seatLimitError);
   const hold = useBookingStore((s) => s.hold);
@@ -31,6 +34,7 @@ export function SeatSelectionPage() {
   const contact = useBookingStore((s) => s.contact);
   const setContact = useBookingStore((s) => s.setContact);
   const holdMutation = useSeatHoldMutation();
+  const createBookingMutation = useCreateBookingMutation();
 
   const trip = tripId ? mockTrips.find((t) => t.id === tripId) : undefined;
 
@@ -82,13 +86,62 @@ export function SeatSelectionPage() {
   const seatMapData = tripId ? buildSeatMapData(tripId) : null;
   const stopOptions = trip ? getStopOptions(trip) : null;
 
-  if (!seatMapData) {
+  if (!seatMapData || !trip || !stopOptions) {
     return (
       <EmptyState
         title="Không tìm thấy chuyến"
         description="Chuyến xe này không tồn tại hoặc đã ngừng bán vé."
       />
     );
+  }
+
+  const { fromName, toName } = getTripRouteLabel(trip);
+  const pickup = stopOptions.pickups.find((p) => p.stopId === pickupStopId) ?? null;
+  const dropoff = stopOptions.dropoffs.find((d) => d.stopId === dropoffStopId) ?? null;
+  const seatPrice = getSeatPrice(trip.id);
+  const totalAmount = selectedSeats.length * seatPrice;
+
+  const blockedReason =
+    selectedSeats.length === 0
+      ? "Chọn ít nhất 1 ghế để tiếp tục"
+      : !hold
+        ? "Đang giữ ghế, vui lòng đợi trong giây lát"
+        : !pickup || !dropoff
+          ? "Chọn điểm đón và điểm trả"
+          : !contact
+            ? "Điền đầy đủ thông tin hành khách hợp lệ"
+            : null;
+
+  function handleCheckout() {
+    if (!trip || !hold || !pickup || !dropoff || !contact) return;
+
+    const bookingItems: CreateBookingItemRequest[] = selectedSeats.map((seat) => ({
+      passengerName: contact.fullName,
+      passengerPhone: contact.phone,
+      seatNumber: seat.seatNumber,
+      stopOrderFrom: trip.stopTimes.find((st) => st.stopId === pickup.stopId)?.stopSequence ?? 1,
+      stopOrderTo: trip.stopTimes.find((st) => st.stopId === dropoff.stopId)?.stopSequence ?? 1,
+      price: seatPrice,
+      departureTime: trip.departureTime,
+      arrivalTime: trip.arrivalTime,
+      fromStopName: pickup.name,
+      toStopName: dropoff.name,
+      seatType: seat.seatType ?? undefined,
+      floor: seat.floor,
+    }));
+
+    const request: CreateBookingRequest = {
+      customerId: hold.customerId,
+      tripId: trip.id,
+      bookingItems,
+      gateway: "VNPAY",
+      currency: "VND",
+      desc: `Vé xe ${fromName} - ${toName}`,
+    };
+
+    createBookingMutation.mutate(request, {
+      onSuccess: (booking) => navigate(`/bookings/${booking.id}/payment`),
+    });
   }
 
   return (
@@ -146,6 +199,20 @@ export function SeatSelectionPage() {
           <PassengerForm defaultValues={contact ?? undefined} onChangeValid={setContact} />
         </div>
       </div>
+
+      <BookingSummarySidebar
+        fromName={fromName}
+        toName={toName}
+        departureTime={trip.departureTime}
+        selectedSeats={selectedSeats}
+        pickup={pickup}
+        dropoff={dropoff}
+        totalAmount={totalAmount}
+        blockedReason={blockedReason}
+        isSubmitting={createBookingMutation.isPending}
+        submitError={createBookingMutation.error?.message ?? null}
+        onSubmit={handleCheckout}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/store";
-import { requestSeatHold } from "./mock-api";
+import { createBooking, requestSeatHold } from "./mock-api";
 
 let guestCustomerId: string | null = null;
 
@@ -16,4 +16,8 @@ export function useSeatHoldMutation() {
     mutationFn: ({ tripId, seatIds }: { tripId: string; seatIds: string[] }) =>
       requestSeatHold(tripId, seatIds, user?.id ?? getGuestCustomerId()),
   });
+}
+
+export function useCreateBookingMutation() {
+  return useMutation({ mutationFn: createBooking });
 }

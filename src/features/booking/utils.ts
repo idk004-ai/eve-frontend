@@ -1,11 +1,13 @@
 import type { SeatAvailabilityStatus, Trip } from "@/shared/api/types";
 import { busSeatsByBusId } from "@/shared/mocks/fleet";
-import { mockStops } from "@/shared/mocks/routes";
+import { mockLocations } from "@/shared/mocks/locations";
+import { mockRoutes, mockRouteVariants, mockStops } from "@/shared/mocks/routes";
 import {
   segmentSeatAvailabilitiesByTripId,
   tripInventoryByTripId,
   tripSeatsByTripId,
 } from "@/shared/mocks/seat-inventory";
+import { TRIP_HCM_DL_MORNING, TRIP_HN_DN_MORNING, TRIP_HN_DN_NIGHT } from "@/shared/mocks/trips";
 
 export interface SeatMapSeatVM {
   seatId: string;
@@ -13,6 +15,7 @@ export interface SeatMapSeatVM {
   floor: number;
   row: number;
   status: SeatAvailabilityStatus;
+  seatType?: string | null;
 }
 
 export interface SeatMapData {
@@ -76,6 +79,7 @@ export function buildSeatMapData(tripId: string): SeatMapData | null {
         floor: busSeat?.floor ?? 1,
         row: rowMatch ? Number(rowMatch[0]) : 0,
         status: worstStatus(statusesBySeatId.get(seat.id) ?? ["AVAILABLE"]),
+        seatType: busSeat?.seatType,
       };
     })
     .sort((a, b) => a.row - b.row);
@@ -150,4 +154,30 @@ export function getStopOptions(trip: Trip): {
   }
 
   return { pickups, dropoffs };
+}
+
+export function formatCurrencyVnd(amount: number): string {
+  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
+}
+
+// Chưa có field giá trên Trip/TripSeat ở backend (xem ghi chú shared/api/types.ts) — mock giá
+// mỗi ghế theo trip, khớp SEAT_PRICE_HN_DN đã dùng ở shared/mocks/bookings.ts.
+const SEAT_PRICE_BY_TRIP_ID: Record<string, number> = {
+  [TRIP_HN_DN_MORNING.id]: 450_000,
+  [TRIP_HN_DN_NIGHT.id]: 480_000,
+  [TRIP_HCM_DL_MORNING.id]: 320_000,
+};
+const DEFAULT_SEAT_PRICE = 400_000;
+
+export function getSeatPrice(tripId: string): number {
+  return SEAT_PRICE_BY_TRIP_ID[tripId] ?? DEFAULT_SEAT_PRICE;
+}
+
+/** Tên điểm đi/điểm đến của trip, ghép routeVariantId → Route → Location. */
+export function getTripRouteLabel(trip: Trip): { fromName: string; toName: string } {
+  const variant = mockRouteVariants.find((v) => v.id === trip.routeVariantId);
+  const route = variant ? mockRoutes.find((r) => r.id === variant.routeId) : undefined;
+  const from = route ? mockLocations.find((l) => l.id === route.departureLocationId) : undefined;
+  const to = route ? mockLocations.find((l) => l.id === route.arrivalLocationId) : undefined;
+  return { fromName: from?.name ?? "?", toName: to?.name ?? "?" };
 }

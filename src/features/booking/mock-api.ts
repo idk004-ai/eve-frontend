@@ -1,4 +1,6 @@
-import type { SeatHold } from "@/shared/api/types";
+import type { Booking, BookingItem, CreateBookingRequest, Payment, SeatHold } from "@/shared/api/types";
+import { mockBookings } from "@/shared/mocks/bookings";
+import { mockPayments } from "@/shared/mocks/payments";
 import { createMockSeatHold } from "@/shared/mocks/seat-inventory";
 
 /**
@@ -29,4 +31,95 @@ export async function requestSeatHold(
   }
 
   return createMockSeatHold({ tripId, customerId, ttlSeconds: HOLD_TTL_SECONDS });
+}
+
+/**
+ * "DB" trong bộ nhớ cho booking/payment tạo trong phiên hiện tại — seed sẵn 2 booking demo từ
+ * T0.5 để trang tra cứu (D9) và điều hướng thẳng URL vẫn hoạt động. Mất khi reload trang, chấp
+ * nhận được vì đây là mock thay cho booking-service thật (D10).
+ */
+const bookingsDb = new Map<string, Booking>(mockBookings.map((b) => [b.id, b]));
+const paymentsDb = new Map<string, Payment>(mockPayments.map((p) => [p.id, p]));
+
+const BOOKING_NETWORK_DELAY_MS = 500;
+const PAYMENT_TTL_SECONDS = 15 * 60;
+let bookingSequence = mockBookings.length + 1;
+
+export async function createBooking(request: CreateBookingRequest): Promise<Booking> {
+  await wait(BOOKING_NETWORK_DELAY_MS);
+
+  const bookingId = `booking-mock-${Date.now()}`;
+  const paymentId = `payment-mock-${Date.now()}`;
+  const expiresAt = new Date(Date.now() + PAYMENT_TTL_SECONDS * 1000).toISOString();
+  const totalAmount = request.bookingItems.reduce((sum, item) => sum + item.price, 0);
+
+  const items: BookingItem[] = request.bookingItems.map((item, index) => ({
+    id: `${bookingId}__item${index + 1}`,
+    bookingId,
+    tripId: request.tripId,
+    tripSegmentId: "",
+    seatId: "",
+    holdId: null,
+    allocationId: null,
+    passengerName: item.passengerName,
+    passengerPhone: item.passengerPhone ?? null,
+    seatNumber: item.seatNumber,
+    price: item.price,
+    status: "PENDING",
+    stopOrderFrom: item.stopOrderFrom,
+    stopOrderTo: item.stopOrderTo,
+    departureTime: item.departureTime,
+    arrivalTime: item.arrivalTime,
+    fromStopName: item.fromStopName,
+    toStopName: item.toStopName,
+    seatType: item.seatType ?? null,
+    floor: item.floor ?? null,
+  }));
+
+  const booking: Booking = {
+    id: bookingId,
+    bookingCode: `BK-${String(bookingSequence++).padStart(8, "0")}`,
+    customerId: request.customerId,
+    customerEmail: null,
+    customerUsername: null,
+    customerPhone: null,
+    tripId: request.tripId,
+    status: "PAYMENT_PENDING",
+    totalAmount,
+    expiresAt,
+    paymentId,
+    holdId: null,
+    qrUrl: null,
+    cancelReason: null,
+    gateway: request.gateway,
+    currency: request.currency,
+    desc: request.desc ?? null,
+    items,
+  };
+
+  const payment: Payment = {
+    id: paymentId,
+    bookingId,
+    userId: request.customerId,
+    amount: totalAmount,
+    currency: request.currency,
+    status: "PROCESSING",
+    description: request.desc ?? null,
+    paidAt: null,
+    expiresAt,
+  };
+
+  bookingsDb.set(bookingId, booking);
+  paymentsDb.set(paymentId, payment);
+  return booking;
+}
+
+export async function getBookingById(id: string): Promise<Booking | null> {
+  await wait(200);
+  return bookingsDb.get(id) ?? null;
+}
+
+export async function getPaymentById(id: string): Promise<Payment | null> {
+  await wait(200);
+  return paymentsDb.get(id) ?? null;
 }
