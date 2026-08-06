@@ -4,6 +4,7 @@ import { EmptyState } from "@/shared/components/EmptyState";
 import { Spinner } from "@/shared/ui/spinner";
 import { mockTrips } from "@/shared/mocks/trips";
 import { HoldCountdown } from "../components/HoldCountdown";
+import { PassengerForm } from "../components/PassengerForm";
 import { SeatMap } from "../components/SeatMap";
 import { StopSelector } from "../components/StopSelector";
 import { useSeatHoldMutation } from "../hooks";
@@ -27,6 +28,8 @@ export function SeatSelectionPage() {
   const dropoffStopId = useBookingStore((s) => s.dropoffStopId);
   const setPickupStop = useBookingStore((s) => s.setPickupStop);
   const setDropoffStop = useBookingStore((s) => s.setDropoffStop);
+  const contact = useBookingStore((s) => s.contact);
+  const setContact = useBookingStore((s) => s.setContact);
   const holdMutation = useSeatHoldMutation();
 
   const trip = tripId ? mockTrips.find((t) => t.id === tripId) : undefined;
@@ -138,6 +141,10 @@ export function SeatSelectionPage() {
             />
           </div>
         )}
+
+        <div className="mt-6">
+          <PassengerForm defaultValues={contact ?? undefined} onChangeValid={setContact} />
+        </div>
       </div>
     </div>
   );

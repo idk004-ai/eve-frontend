@@ -11,6 +11,12 @@ export interface SelectedSeat {
   floor: number;
 }
 
+export interface PassengerContact {
+  fullName: string;
+  phone: string;
+  email: string;
+}
+
 interface BookingFlowState {
   tripId: string | null;
   selectedSeats: SelectedSeat[];
@@ -20,6 +26,7 @@ interface BookingFlowState {
   holdMessage: string | null;
   pickupStopId: string | null;
   dropoffStopId: string | null;
+  contact: PassengerContact | null;
 
   /** Gắn trip mới vào flow — reset toàn bộ state cũ nếu đổi sang trip khác. */
   setTrip: (tripId: string) => void;
@@ -31,6 +38,7 @@ interface BookingFlowState {
   releaseHold: (message: string) => void;
   setPickupStop: (stopId: string) => void;
   setDropoffStop: (stopId: string) => void;
+  setContact: (contact: PassengerContact) => void;
   reset: () => void;
 }
 
@@ -42,6 +50,7 @@ const initialFlowState = {
   holdMessage: null as string | null,
   pickupStopId: null as string | null,
   dropoffStopId: null as string | null,
+  contact: null as PassengerContact | null,
 };
 
 export const useBookingStore = create<BookingFlowState>()((set, get) => ({
@@ -90,6 +99,8 @@ export const useBookingStore = create<BookingFlowState>()((set, get) => ({
   setPickupStop: (stopId) => set({ pickupStopId: stopId }),
 
   setDropoffStop: (stopId) => set({ dropoffStopId: stopId }),
+
+  setContact: (contact) => set({ contact }),
 
   reset: () => set({ ...initialFlowState }),
 }));
