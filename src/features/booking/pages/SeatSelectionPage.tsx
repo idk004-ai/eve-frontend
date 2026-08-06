@@ -2,11 +2,13 @@ import { useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/shared/components/EmptyState";
 import { Spinner } from "@/shared/ui/spinner";
+import { mockTrips } from "@/shared/mocks/trips";
 import { HoldCountdown } from "../components/HoldCountdown";
 import { SeatMap } from "../components/SeatMap";
+import { StopSelector } from "../components/StopSelector";
 import { useSeatHoldMutation } from "../hooks";
 import { useBookingStore } from "../store";
-import { buildSeatMapData } from "../utils";
+import { buildSeatMapData, getStopOptions } from "../utils";
 
 const HOLD_DEBOUNCE_MS = 500;
 
@@ -21,11 +23,27 @@ export function SeatSelectionPage() {
   const setHold = useBookingStore((s) => s.setHold);
   const clearHold = useBookingStore((s) => s.clearHold);
   const releaseHold = useBookingStore((s) => s.releaseHold);
+  const pickupStopId = useBookingStore((s) => s.pickupStopId);
+  const dropoffStopId = useBookingStore((s) => s.dropoffStopId);
+  const setPickupStop = useBookingStore((s) => s.setPickupStop);
+  const setDropoffStop = useBookingStore((s) => s.setDropoffStop);
   const holdMutation = useSeatHoldMutation();
+
+  const trip = tripId ? mockTrips.find((t) => t.id === tripId) : undefined;
 
   useEffect(() => {
     if (tripId) setTrip(tripId);
   }, [tripId, setTrip]);
+
+  // Mặc định điểm đón = điểm đón đầu tiên, điểm trả = điểm trả cuối cùng (trọn tuyến) — chạy lại
+  // mỗi khi đổi trip nên luôn ghi đè đúng theo trip mới, không phụ thuộc giá trị cũ trong store.
+  useEffect(() => {
+    if (!trip) return;
+    const { pickups, dropoffs } = getStopOptions(trip);
+    if (pickups[0]) setPickupStop(pickups[0].stopId);
+    if (dropoffs.length > 0) setDropoffStop(dropoffs[dropoffs.length - 1].stopId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trip?.id]);
 
   const seatIdsKey = useMemo(
     () =>
@@ -59,6 +77,7 @@ export function SeatSelectionPage() {
   }, [tripId, seatIdsKey]);
 
   const seatMapData = tripId ? buildSeatMapData(tripId) : null;
+  const stopOptions = trip ? getStopOptions(trip) : null;
 
   if (!seatMapData) {
     return (
@@ -100,6 +119,25 @@ export function SeatSelectionPage() {
             onToggle={toggleSeat}
           />
         </div>
+
+        {stopOptions && (
+          <div className="mt-6 grid gap-6 sm:grid-cols-2">
+            <StopSelector
+              name="pickup-stop"
+              title="Điểm đón"
+              options={stopOptions.pickups}
+              selectedStopId={pickupStopId}
+              onChange={setPickupStop}
+            />
+            <StopSelector
+              name="dropoff-stop"
+              title="Điểm trả"
+              options={stopOptions.dropoffs}
+              selectedStopId={dropoffStopId}
+              onChange={setDropoffStop}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

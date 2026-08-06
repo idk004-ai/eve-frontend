@@ -18,6 +18,8 @@ interface BookingFlowState {
   hold: SeatHold | null;
   /** Thông báo lỗi liên quan tới hold: tranh chấp ghế lúc tạo, hoặc đã hết hạn giữ. */
   holdMessage: string | null;
+  pickupStopId: string | null;
+  dropoffStopId: string | null;
 
   /** Gắn trip mới vào flow — reset toàn bộ state cũ nếu đổi sang trip khác. */
   setTrip: (tripId: string) => void;
@@ -27,6 +29,8 @@ interface BookingFlowState {
   clearHold: () => void;
   /** Hold thất bại (tranh chấp) hoặc hết hạn: bỏ chọn ghế, xoá hold, hiện thông báo. */
   releaseHold: (message: string) => void;
+  setPickupStop: (stopId: string) => void;
+  setDropoffStop: (stopId: string) => void;
   reset: () => void;
 }
 
@@ -36,6 +40,8 @@ const initialFlowState = {
   seatLimitError: null as string | null,
   hold: null as SeatHold | null,
   holdMessage: null as string | null,
+  pickupStopId: null as string | null,
+  dropoffStopId: null as string | null,
 };
 
 export const useBookingStore = create<BookingFlowState>()((set, get) => ({
@@ -80,6 +86,10 @@ export const useBookingStore = create<BookingFlowState>()((set, get) => ({
   clearHold: () => set({ hold: null }),
 
   releaseHold: (message) => set({ hold: null, selectedSeats: [], holdMessage: message }),
+
+  setPickupStop: (stopId) => set({ pickupStopId: stopId }),
+
+  setDropoffStop: (stopId) => set({ dropoffStopId: stopId }),
 
   reset: () => set({ ...initialFlowState }),
 }));

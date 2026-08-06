@@ -1,5 +1,6 @@
-import type { SeatAvailabilityStatus } from "@/shared/api/types";
+import type { SeatAvailabilityStatus, Trip } from "@/shared/api/types";
 import { busSeatsByBusId } from "@/shared/mocks/fleet";
+import { mockStops } from "@/shared/mocks/routes";
 import {
   segmentSeatAvailabilitiesByTripId,
   tripInventoryByTripId,
@@ -97,4 +98,56 @@ export function formatCountdown(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+export interface StopOptionVM {
+  stopId: string;
+  name: string;
+  address: string;
+  /** Giờ dự kiến đón/trả tại điểm dừng này, tính từ `departureTime` của trip + offset (HH:mm). */
+  time: string;
+}
+
+function formatOffsetTime(baseIso: string, offsetMin: number): string {
+  const date = new Date(new Date(baseIso).getTime() + offsetMin * 60_000);
+  return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+}
+
+/**
+ * Điểm đón (PICKUP/BOTH) và điểm trả (DROPOFF/BOTH) của trip, ghép `stopTimes` với `mockStops`
+ * để lấy tên/địa chỉ, sắp theo `stopSequence`.
+ */
+export function getStopOptions(trip: Trip): {
+  pickups: StopOptionVM[];
+  dropoffs: StopOptionVM[];
+} {
+  const pickups: StopOptionVM[] = [];
+  const dropoffs: StopOptionVM[] = [];
+
+  const sortedStopTimes = [...trip.stopTimes].sort((a, b) => a.stopSequence - b.stopSequence);
+  for (const stopTime of sortedStopTimes) {
+    const stop = mockStops.find((s) => s.id === stopTime.stopId);
+    if (!stop) continue;
+
+    if (stopTime.stopRole === "PICKUP" || stopTime.stopRole === "BOTH") {
+      const offset = stopTime.departureOffsetMin ?? stopTime.arrivalOffsetMin ?? 0;
+      pickups.push({
+        stopId: stop.id,
+        name: stop.name,
+        address: stop.address,
+        time: formatOffsetTime(trip.departureTime, offset),
+      });
+    }
+    if (stopTime.stopRole === "DROPOFF" || stopTime.stopRole === "BOTH") {
+      const offset = stopTime.arrivalOffsetMin ?? stopTime.departureOffsetMin ?? 0;
+      dropoffs.push({
+        stopId: stop.id,
+        name: stop.name,
+        address: stop.address,
+        time: formatOffsetTime(trip.departureTime, offset),
+      });
+    }
+  }
+
+  return { pickups, dropoffs };
 }
