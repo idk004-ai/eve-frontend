@@ -87,3 +87,14 @@ export function buildSeatMapData(tripId: string): SeatMapData | null {
 
   return { floors, seatsByFloor };
 }
+
+/** Số giây còn lại tới `expiresAt` (ISO) — luôn tính lại từ mốc thời gian thật, không đếm dồn để tránh trôi. */
+export function secondsUntil(expiresAt: string): number {
+  return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+}
+
+export function formatCountdown(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}

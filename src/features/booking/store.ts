@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { SeatHold } from "@/shared/api/types";
 import type { SeatMapSeatVM } from "./utils";
 
 /** Giới hạn số ghế tối đa mỗi đơn (mock — chưa có quy tắc chính thức từ backend). */
@@ -14,10 +15,18 @@ interface BookingFlowState {
   tripId: string | null;
   selectedSeats: SelectedSeat[];
   seatLimitError: string | null;
+  hold: SeatHold | null;
+  /** Thông báo lỗi liên quan tới hold: tranh chấp ghế lúc tạo, hoặc đã hết hạn giữ. */
+  holdMessage: string | null;
 
   /** Gắn trip mới vào flow — reset toàn bộ state cũ nếu đổi sang trip khác. */
   setTrip: (tripId: string) => void;
   toggleSeat: (seat: SeatMapSeatVM) => void;
+  setHold: (hold: SeatHold) => void;
+  /** Bỏ chọn hết ghế (vd trước khi tạo hold mới) — không kèm thông báo lỗi. */
+  clearHold: () => void;
+  /** Hold thất bại (tranh chấp) hoặc hết hạn: bỏ chọn ghế, xoá hold, hiện thông báo. */
+  releaseHold: (message: string) => void;
   reset: () => void;
 }
 
@@ -25,6 +34,8 @@ const initialFlowState = {
   tripId: null as string | null,
   selectedSeats: [] as SelectedSeat[],
   seatLimitError: null as string | null,
+  hold: null as SeatHold | null,
+  holdMessage: null as string | null,
 };
 
 export const useBookingStore = create<BookingFlowState>()((set, get) => ({
@@ -44,6 +55,7 @@ export const useBookingStore = create<BookingFlowState>()((set, get) => ({
       set({
         selectedSeats: selectedSeats.filter((s) => s.seatId !== seat.seatId),
         seatLimitError: null,
+        holdMessage: null,
       });
       return;
     }
@@ -59,8 +71,15 @@ export const useBookingStore = create<BookingFlowState>()((set, get) => ({
         { seatId: seat.seatId, seatNumber: seat.seatNumber, floor: seat.floor },
       ],
       seatLimitError: null,
+      holdMessage: null,
     });
   },
+
+  setHold: (hold) => set({ hold, holdMessage: null }),
+
+  clearHold: () => set({ hold: null }),
+
+  releaseHold: (message) => set({ hold: null, selectedSeats: [], holdMessage: message }),
 
   reset: () => set({ ...initialFlowState }),
 }));
