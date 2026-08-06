@@ -1,5 +1,7 @@
 import { mockLocations } from "@/shared/mocks/locations";
 import { HeroSearchForm } from "../components/HeroSearchForm";
+import { PopularRoutes } from "../components/PopularRoutes";
+import { ServiceCommitments } from "../components/ServiceCommitments";
 
 const locationOptions = mockLocations.map((location) => ({
   value: location.id,
@@ -17,6 +19,10 @@ export function HomePage() {
       </section>
 
       <HeroSearchForm locationOptions={locationOptions} />
+
+      <PopularRoutes />
+
+      <ServiceCommitments />
     </div>
   );
 }
