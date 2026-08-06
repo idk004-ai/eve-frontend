@@ -24,7 +24,7 @@ export const router = createBrowserRouter([
           {
             path: "/",
             lazy: () =>
-              import("@/features/trips/pages/HomePage").then((m) => ({ Component: m.HomePage })),
+              import("@/features/home/pages/HomePage").then((m) => ({ Component: m.HomePage })),
           },
           {
             path: "/search",
