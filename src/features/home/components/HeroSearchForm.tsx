@@ -59,7 +59,7 @@ export function HeroSearchForm({
       <CardContent className="pt-6">
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[1fr_auto_1fr_1fr_1fr_auto]"
+          className="grid grid-cols-1 items-end gap-4 lg:grid-cols-[1fr_auto_1fr_1fr_1fr_auto]"
         >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="from">Điểm đi</Label>
@@ -86,9 +86,9 @@ export function HeroSearchForm({
             size="icon"
             aria-label="Đổi chiều điểm đi/điểm đến"
             onClick={handleSwap}
-            className="mb-3 hidden sm:inline-flex"
+            className="mx-auto lg:mx-0 lg:mb-3"
           >
-            <ArrowLeftRight className="h-4 w-4" />
+            <ArrowLeftRight className="h-4 w-4 rotate-90 lg:rotate-0" />
           </Button>
 
           <div className="flex flex-col gap-1.5">
