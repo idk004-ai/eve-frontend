@@ -126,6 +126,12 @@ export async function getBookingById(id: string): Promise<Booking | null> {
   return bookingsDb.get(id) ?? null;
 }
 
+export async function findBookingByCode(bookingCode: string): Promise<Booking | null> {
+  await wait(300);
+  const normalized = bookingCode.trim().toUpperCase();
+  return [...bookingsDb.values()].find((b) => b.bookingCode === normalized) ?? null;
+}
+
 export async function createQrCode(paymentId: string, amount: number): Promise<QRCode> {
   await wait(400);
 

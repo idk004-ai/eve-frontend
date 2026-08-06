@@ -3,6 +3,7 @@ import { useAuthStore } from "@/features/auth/store";
 import {
   createBooking,
   createQrCode,
+  findBookingByCode,
   getBookingById,
   getPaymentStatus,
   requestSeatHold,
@@ -57,4 +58,8 @@ export function usePaymentStatusQuery(paymentId: string | undefined) {
       return status === "PROCESSING" || status === "PENDING" ? PAYMENT_POLL_INTERVAL_MS : false;
     },
   });
+}
+
+export function useBookingLookupMutation() {
+  return useMutation({ mutationFn: findBookingByCode });
 }
